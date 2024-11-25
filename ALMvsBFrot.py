@@ -365,6 +365,7 @@ def Compare_process(J,G,S,n,rho_0,rho_sigma,theta,tol,max_iter,Pair
                 L_alm,Psi_alm,d_alm,Cov_alm=para_decompose(x_alm,J,G)
                 nll_alm = nll(Psi_alm,L_alm,np.diag(d_alm),S,n)
                 Nll_alm_list.append(nll_alm)
+                X_alm_list.append(x_alm)
             else: 
                 Repeat_UF.append(x_alm)
         Unfinished_alm = Repeat_UF
