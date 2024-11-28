@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Nov  9 20:52:13 2024
+Created on Tue Nov 26 08:47:32 2024
 
 @author: ZZ
 """
@@ -205,6 +205,7 @@ def init_value(J,G):
 
 def alm_solve(x_init,J,G,S,n,Pair,gamma_0,rho_0,rho_sigma,theta,tol,max_iter):
     time_start = time.time()
+    p = len(x_init)
     x_old = x_init.copy()
     
     gamma = gamma_0.copy()
@@ -214,12 +215,14 @@ def alm_solve(x_init,J,G,S,n,Pair,gamma_0,rho_0,rho_sigma,theta,tol,max_iter):
     cons_val_old = cons_fun(x_old,J,G,Pair)
     
     dist_val = np.max(np.sort(np.abs(L_old[:,1:]),axis=1)[:,-2])
+    dist_para = np.linalg.norm(x_old)/np.sqrt(p)
     
     iter_num = 0
-    while dist_val > tol and iter_num < max_iter:
+    while max(dist_val,dist_para) > tol and iter_num < max_iter:
         result = minimize(objective_function,x_old,args=(J,G,S,n,gamma,rho,Pair),method = 'L-BFGS-B',jac = alm_gd)
         x_new = result.x
-            
+        dist_para = np.linalg.norm(x_old - x_new)/np.sqrt(p)    
+        
         cons_val_new =  cons_fun(x_new,J,G,Pair)
         gamma = gamma + rho *cons_val_new
         if np.linalg.norm(cons_val_old,ord = 'fro') > theta*np.linalg.norm(cons_val_new,ord = 'fro'):
@@ -401,8 +404,8 @@ def sensitivity_process(J,G,S,n,gamma_0,rho_0,Sigma_set,Theta_set,tol,max_iter,P
 if __name__ == '__main__':
     rgt.seed(2024)
     
-    J = 15 # 30
-    G = 3 # 5
+    J = 30 # 30
+    G = 5 # 5
     
     n = 500 # n=2000
     
@@ -432,8 +435,8 @@ if __name__ == '__main__':
     S_list = [] 
     D_true,L_true,Phi_true,Psi_true,Cov_true = generator(J,G,Q,n)    
     print(Psi_true)
-    Psi_true_name = 'Sentest/' + 'Psi_true_' + str(int(J)) + '_' + str(int(G))
-    L_true_name = 'Sentest/' + 'L_true_' + str(int(J)) + '_' + str(int(G))
+    Psi_true_name = 'ALMBF_revised/Rot/' + 'Psi_true_' + str(int(J)) + '_' + str(int(G))
+    L_true_name = 'ALMBF_revised/Rot/' + 'L_true_' + str(int(J)) + '_' + str(int(G))
     
     np.save(Psi_true_name,Psi_true)
     np.save(L_true_name,L_true)
@@ -484,17 +487,17 @@ if __name__ == '__main__':
     Rep_num_list = np.stack(Rep_num_list, axis=0)
     Finished_list = np.stack(Finished_list, axis=0)
     
-    Lr_err_name = 'Sentest/' + 'Lr_err_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    L_err_name = 'Sentest/' + 'L_err_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Psi_err_name = 'Sentest/' + 'Psi_err_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    D_err_name = 'Sentest/' + 'D_err_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Lr_err_name = 'ALMBF_revised/Sen/' + 'Lr_err_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    L_err_name = 'ALMBF_revised/Sen/' + 'L_err_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Psi_err_name = 'ALMBF_revised/Sen/' + 'Psi_err_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    D_err_name = 'ALMBF_revised/Sen/' + 'D_err_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
     
-    EMC_name = 'Sentest/' + 'EMC_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    ACC_name = 'Sentest/' + 'ACC_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Time_cost_name = 'Sentest/' + 'Time_cost_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Niter_name = 'Sentest/' + 'Niter_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Rep_num_name = 'Sentest/' + 'Rep_num_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Finished_name = 'Sentest/' + 'Finished_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    EMC_name = 'ALMBF_revised/Sen/' + 'EMC_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    ACC_name = 'ALMBF_revised/Sen/' + 'ACC_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Time_cost_name = 'ALMBF_revised/Sen/' + 'Time_cost_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Niter_name = 'ALMBF_revised/Sen/' + 'Niter_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Rep_num_name = 'ALMBF_revised/Sen/' + 'Rep_num_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Finished_name = 'ALMBF_revised/Sen/' + 'Finished_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
     
     np.save(Lr_err_name,Lr_err_list)
     np.save(L_err_name,L_err_list)
@@ -510,8 +513,3 @@ if __name__ == '__main__':
     
     print(np.mean(L_err_list,axis=0))
     print(np.mean(EMC_list,axis=0))
-    
-    
-    
-    
-    

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Aug 25 11:50:47 2024
+Created on Tue Nov 26 09:10:11 2024
 
-@author: 888
+@author: ZZ
 """
 
 import os
@@ -264,6 +264,7 @@ def init_value(J,G):
     return x
 
 def alm_solve(x_init,J,G,S,n,Pair,gamma_0,rho_0,rho_sigma,theta,tol,max_iter):
+    p = len(x_init)
     x_old = x_init.copy()
     
     gamma = gamma_0.copy()
@@ -273,13 +274,14 @@ def alm_solve(x_init,J,G,S,n,Pair,gamma_0,rho_0,rho_sigma,theta,tol,max_iter):
     cons_val_old = cons_fun(x_old,J,G,Pair)
     
     dist_val = np.max(np.sort(np.abs(L_old[:,1:]),axis=1)[:,-2])
- 
+    dist_para = np.linalg.norm(x_old)/np.sqrt(p)
+    #print(dist_val)
     
     iter_num = 0
-    while dist_val > tol and iter_num < max_iter:
+    while max(dist_para,dist_val) > tol and iter_num < max_iter:
         result = minimize(objective_function,x_old,args=(J,G,S,n,gamma,rho,Pair),method = 'L-BFGS-B',jac = alm_gd)
         x_new = result.x
-            
+        dist_para = np.linalg.norm(x_old - x_new)/np.sqrt(p)    
         cons_val_new =  cons_fun(x_new,J,G,Pair)
         gamma = gamma + rho *cons_val_new
         if np.linalg.norm(cons_val_old,ord = 'fro') > theta*np.linalg.norm(cons_val_new,ord = 'fro'):
@@ -288,7 +290,7 @@ def alm_solve(x_init,J,G,S,n,Pair,gamma_0,rho_0,rho_sigma,theta,tol,max_iter):
         x_old = x_new.copy()
         L_old,Psi_old,d_old,Cov_old = para_decompose(x_old,J,G)
         dist_val = np.max(np.sort(np.abs(L_old[:,1:]),axis=1)[:,-2])
-
+        #print(dist_val)
         iter_num = iter_num + 1
     return x_old,iter_num,dist_val
 
@@ -309,12 +311,16 @@ def generator(J,G,Q,n):
     
     Phi_true = np.zeros([1+G,1+G])
     Phi_true[0,0] = 1
+    #tmp = rgt.randn(int(G*(G-1)/2))
     tmp = 0.5*rgt.randn(int(G*(G-1)/2))
     
     Phi_true[1:(G+1),1:(G+1)] = stan_trans(tmp,G)
     Psi_true = Phi_true.T @ Phi_true
     Cov_true = L_true @ (Psi_true @ L_true.T) + D_true
     
+    #mean = np.zeros(J)
+    #samples = np.random.multivariate_normal(mean, Cov_true, size=n)
+    #S = samples.T @ samples /n
     
     return D_true,L_true,Phi_true,Psi_true,Cov_true
 
@@ -498,7 +504,8 @@ def Compare_process(J,G,S,n,rho_0,rho_sigma,theta,tol,max_iter,Pair
     else:
         L_efa_err = -1
         Psi_efa_err = -1
-
+        #Lr_alm_err = -1
+        #d_alm_err = -1
         Exact_cover_efa = -np.ones(len(Delta_list))
         Average_cover_efa = -np.ones(len(Delta_list))
     print('Finished')
@@ -519,10 +526,10 @@ if __name__ == '__main__':
     
     Delta_list = [0.2,0.4,0.6,0.8,1]
     
-    J = 30
-    G = 5
+    J = 15
+    G = 3
     C = G+1
-    n=2000
+    n=500
     tol = 1e-2
     max_iter = 1000 
     rho_0 = 100
@@ -628,19 +635,19 @@ if __name__ == '__main__':
     print(np.mean(Average_cover_efa_list,axis=0))
     print(np.mean(UF_id_list))
     
-    L_alm_err_list_name = 'ALMBFrot/' + 'L_alm_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Psi_alm_err_list_name = 'ALMBFrot/' + 'Psi_alm_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Lr_alm_err_list_name = 'ALMBFrot/' + 'Lr_alm_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    d_alm_err_list_name = 'ALMBFrot/' + 'd_alm_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Exact_cover_alm_list_name = 'ALMBFrot/' + 'Exact_cover_alm_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Average_cover_alm_list_name = 'ALMBFrot/' + 'Average_cover_alm_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    L_efa_err_list_name = 'ALMBFrot/' + 'L_efa_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Psi_efa_err_list_name = 'ALMBFrot/' + 'Psi_efa_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Lr_efa_err_list_name = 'ALMBFrot/' + 'Lr_efa_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    d_efa_err_list_name = 'ALMBFrot/' + 'd_efa_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Exact_cover_efa_list_name = 'ALMBFrot/' + 'Exact_cover_efa_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    Average_cover_efa_list_name = 'ALMBFrot/' + 'Average_cover_efa_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
-    UF_id_list_name = 'ALMBFrot/' + 'UF_id_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    L_alm_err_list_name = 'ALMBF_revised/Rot/' + 'L_alm_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Psi_alm_err_list_name = 'ALMBF_revised/Rot/' + 'Psi_alm_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Lr_alm_err_list_name = 'ALMBF_revised/Rot/' + 'Lr_alm_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    d_alm_err_list_name = 'ALMBF_revised/Rot/' + 'd_alm_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Exact_cover_alm_list_name = 'ALMBF_revised/Rot/' + 'Exact_cover_alm_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Average_cover_alm_list_name = 'ALMBF_revised/Rot/' + 'Average_cover_alm_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    L_efa_err_list_name = 'ALMBF_revised/Rot/' + 'L_efa_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Psi_efa_err_list_name = 'ALMBF_revised/Rot/' + 'Psi_efa_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Lr_efa_err_list_name = 'ALMBF_revised/Rot/' + 'Lr_efa_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    d_efa_err_list_name = 'ALMBF_revised/Rot/' + 'd_efa_err_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Exact_cover_efa_list_name = 'ALMBF_revised/Rot/' + 'Exact_cover_efa_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    Average_cover_efa_list_name = 'ALMBF_revised/Rot/' + 'Average_cover_efa_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
+    UF_id_list_name = 'ALMBF_revised/Rot/' + 'UF_id_list_' + str(int(J)) + '_' + str(int(G)) + '_' + str(int(n))
     
     np.save(L_alm_err_list_name,L_alm_err_list)
     np.save(Psi_alm_err_list_name,Psi_alm_err_list)
@@ -655,5 +662,3 @@ if __name__ == '__main__':
     np.save(Exact_cover_efa_list_name,Exact_cover_efa_list)
     np.save(Average_cover_efa_list_name,Average_cover_efa_list)
     np.save(UF_id_list_name,UF_id_list)
-    
-    

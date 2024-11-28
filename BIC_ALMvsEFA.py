@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Aug 29 22:18:44 2024
+Created on Tue Nov 26 10:01:37 2024
 
-@author: 888
+@author: ZZ
 """
 
 import os
@@ -78,6 +78,7 @@ def stan_trans(x,G):
     for i in range(1,G):
         h[0:i,i] = x[int((i-1)*i/2):int((i+1)*i/2)]
 
+    #Z = (np.exp(2*h)-1) / (np.exp(2*h) + 1)
     Z = np.tanh(h)
 
     U = np.zeros([G,G])
@@ -119,6 +120,7 @@ def gd_rp(x,dU,G):
         raise NotImplementedError
     if len(dU) != int((G-1)*(G+2)/2):
         raise NotImplementedError
+    #Z = (np.exp(2*x) - 1) / (np.exp(2*x) + 1) 
     Z = np.tanh(x)
     dZ = 1-Z**2
     A = np.zeros([int(G*(G-1)/2),int((G-1)*(G+2)/2)])
@@ -250,6 +252,7 @@ def init_value(J,G):
     return x
 
 def alm_solve(x_init,J,G,S,n,Pair,gamma_0,rho_0,rho_sigma,theta,tol,max_iter):
+    p = len(x_init)
     x_old = x_init.copy()
     
     gamma = gamma_0.copy()
@@ -259,12 +262,14 @@ def alm_solve(x_init,J,G,S,n,Pair,gamma_0,rho_0,rho_sigma,theta,tol,max_iter):
     cons_val_old = cons_fun(x_old,J,G,Pair)
     
     dist_val = np.max(np.sort(np.abs(L_old[:,1:]),axis=1)[:,-2])
+    dist_para = np.linalg.norm(x_old)/np.sqrt(p)
+    #print(dist_val)
     
     iter_num = 0
-    while dist_val > tol and iter_num < max_iter:
+    while max(dist_para,dist_val) > tol and iter_num < max_iter:
         result = minimize(objective_function,x_old,args=(J,G,S,n,gamma,rho,Pair),method = 'L-BFGS-B',jac = alm_gd)
         x_new = result.x
-            
+        dist_para = np.linalg.norm(x_old - x_new)/np.sqrt(p)     
         cons_val_new =  cons_fun(x_new,J,G,Pair)
         gamma = gamma + rho *cons_val_new
         if np.linalg.norm(cons_val_old,ord = 'fro') > theta*np.linalg.norm(cons_val_new,ord = 'fro'):
@@ -273,6 +278,7 @@ def alm_solve(x_init,J,G,S,n,Pair,gamma_0,rho_0,rho_sigma,theta,tol,max_iter):
         x_old = x_new.copy()
         L_old,Psi_old,d_old,Cov_old = para_decompose(x_old,J,G)
         dist_val = np.max(np.sort(np.abs(L_old[:,1:]),axis=1)[:,-2])
+        #print(dist_val)
         iter_num = iter_num + 1
     return x_old,iter_num,dist_val
 
@@ -293,12 +299,16 @@ def generator(J,G,Q,n):
     
     Phi_true = np.zeros([1+G,1+G])
     Phi_true[0,0] = 1
-
+    #tmp = rgt.randn(int(G*(G-1)/2))
     tmp = 0.5*rgt.randn(int(G*(G-1)/2))
     
     Phi_true[1:(G+1),1:(G+1)] = stan_trans(tmp,G)
     Psi_true = Phi_true.T @ Phi_true
     Cov_true = L_true @ (Psi_true @ L_true.T) + D_true
+    
+    #mean = np.zeros(J)
+    #samples = np.random.multivariate_normal(mean, Cov_true, size=n)
+    #S = samples.T @ samples /n
     
     return D_true,L_true,Phi_true,Psi_true,Cov_true
 
@@ -329,7 +339,7 @@ def BIC_compare(J,up_r,low_r,Repeat,S,n,rho_0,rho_sigma,theta,tol,max_iter):
         gamma_0 = np.ones([int((g-1)*g/2),J])
         
         NLL_alm = []
-
+        #Niter_alm = np.zeros(Repeat)
         Unfinshed_alm = []
         
         
@@ -356,7 +366,7 @@ def BIC_compare(J,up_r,low_r,Repeat,S,n,rho_0,rho_sigma,theta,tol,max_iter):
         restart_num = 0 
         while len(NLL_alm)< int(Repeat/2) and restart_num<5:
             restart_num = restart_num + 1
-
+            #Unfinshed_alm = []
             Repeat_UF = []
             for i in range(len(Unfinshed_alm)):
                 x_alm,iter_num,dist_val = alm_solve(Unfinshed_alm[i],J,g,S,n,Pair,gamma_0,rho_0,rho_sigma,theta,tol,max_iter)
@@ -399,8 +409,8 @@ def BIC_compare(J,up_r,low_r,Repeat,S,n,rho_0,rho_sigma,theta,tol,max_iter):
 
 if __name__ == '__main__':
     rgt.seed(2024)
-    J = 15
-    G = 3
+    J = 30
+    G = 5
     up_r = G+1
     low_r = G-1
     #Repeat = 20
@@ -455,9 +465,12 @@ if __name__ == '__main__':
     print(np.mean(ALM_loc_list))
     print(np.mean(ALM_stop_list))
     print(np.mean(EFA_loc_list))
-    ALM_loc_list_name = 'ALMBIC/BIC_ALM_loc_' + str(int(J))+ '_' +  str(int(G))+ '_' +  str(int(n))
+    ALM_loc_list_name = 'ALMBF_revised/BIC/BIC_ALM_loc_' + str(int(J))+ '_' +  str(int(G))+ '_' +  str(int(n))
+    #ALM_loc_list_name = 'ALMsimulation/BIC_ALM_loc_' + str(int(J))+ '_' +  str(int(G))
     np.save(ALM_loc_list_name,ALM_loc_list)
-    ALM_stop_list_name = 'ALMBIC/BIC_ALM_stop_' + str(int(J))+ '_' +  str(int(G))+ '_' +  str(int(n))
+    ALM_stop_list_name = 'ALMBF_revised/BIC/BIC_ALM_stop_' + str(int(J))+ '_' +  str(int(G))+ '_' +  str(int(n))
+    #ALM_stop_list_name = 'ALMsimulation/BIC_ALM_stop_' + str(int(J))+ '_' +  str(int(G))
     np.save(ALM_stop_list_name,ALM_stop_list)
-    EFA_loc_list_name = 'ALMBIC/BIC_EFA_loc_' + str(int(J))+ '_' +  str(int(G))+ '_' +  str(int(n))
+    EFA_loc_list_name = 'ALMBF_revised/BIC/BIC_EFA_loc_' + str(int(J))+ '_' +  str(int(G))+ '_' +  str(int(n))
+    #EFA_loc_list_name = 'ALMsimulation/BIC_EFA_loc_' + str(int(J))+ '_' +  str(int(G))
     np.save(EFA_loc_list_name,EFA_loc_list)
